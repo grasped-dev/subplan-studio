@@ -1,0 +1,5 @@
+{
+  "name": "SubPlan Studio: AI Substitute Lesson Video Generator",
+  "description": "An application that converts a teacher's lesson plan into a short, narrated video lesson. It can also generate a lesson plan from scratch based on grade level and selected standards.",
+  "requestFramePermissions": []
+}

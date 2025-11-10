@@ -19,3 +19,10 @@ export interface ProgressStep {
     label: string;
     status: 'pending' | 'in_progress' | 'completed' | 'error';
 }
+
+export interface OutputPreferences {
+    substituteNote: boolean;
+    slides: boolean;
+    video: boolean;
+    audio: boolean;
+}

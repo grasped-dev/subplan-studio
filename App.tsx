@@ -7,7 +7,8 @@ import { ProgressView } from './components/ProgressView';
 import { VideoPreview } from './components/VideoPreview';
 import { generateLessonPlan, generateScript, generateImagePrompts, generateSubstituteNote } from './services/geminiService';
 import { generateImages, assembleVideo } from './services/videoService';
-import type { Workflow, LessonPlan, ProgressStep } from './types';
+import { generatePowerPoint } from './services/slidesService';
+import type { Workflow, LessonPlan, ProgressStep, OutputPreferences } from './types';
 import { PROGRESS_STEPS } from './constants';
 
 const App: React.FC = () => {
@@ -17,6 +18,7 @@ const App: React.FC = () => {
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [substituteNote, setSubstituteNote] = useState<string | null>(null);
     const [images, setImages] = useState<string[]>([]);
+    const [powerPointBlob, setPowerPointBlob] = useState<Blob | null>(null);
 
     const handleReset = useCallback(() => {
         setWorkflow(null);
@@ -25,9 +27,10 @@ const App: React.FC = () => {
         setVideoUrl(null);
         setSubstituteNote(null);
         setImages([]);
+        setPowerPointBlob(null);
     }, []);
 
-    const runVideoGenerationProcess = useCallback(async (lessonPlanText: string) => {
+    const runVideoGenerationProcess = useCallback(async (lessonPlanText: string, preferences: OutputPreferences = { substituteNote: true, slides: true, video: false, audio: false }) => {
         setIsLoading(true);
         setProgress([]);
 
@@ -39,7 +42,9 @@ const App: React.FC = () => {
                     newProgress[existingStepIndex].status = status;
                     return newProgress;
                 }
-                return [...prev, { ...PROGRESS_STEPS[stepKey], status }];
+                const step = PROGRESS_STEPS[stepKey];
+                if (!step) return prev;
+                return [...prev, { ...step, status }];
             });
         };
         
@@ -54,6 +59,15 @@ const App: React.FC = () => {
             setImages(generatedImages);
             updateProgress('visuals', 'completed');
 
+            if (preferences.slides) {
+                updateProgress('presentation', 'in_progress');
+                const lessonTitleMatch = lessonPlanText.match(/Objective:(.*)/i);
+                const lessonTitle = lessonTitleMatch ? lessonTitleMatch[1].trim() : "Generated Lesson";
+                const pptBlob = await generatePowerPoint(script, lessonTitle);
+                setPowerPointBlob(pptBlob);
+                updateProgress('presentation', 'completed');
+            }
+
             updateProgress('voiceover', 'in_progress');
             // Mock voiceover generation
             await new Promise(res => setTimeout(res, 1500));
@@ -64,10 +78,12 @@ const App: React.FC = () => {
             setVideoUrl(finalVideoUrl);
             updateProgress('assembly', 'completed');
             
-            updateProgress('sub_note', 'in_progress');
-            const note = await generateSubstituteNote(lessonPlanText);
-            setSubstituteNote(note);
-            updateProgress('sub_note', 'completed');
+            if (preferences.substituteNote) {
+                updateProgress('sub_note', 'in_progress');
+                const note = await generateSubstituteNote(lessonPlanText);
+                setSubstituteNote(note);
+                updateProgress('sub_note', 'completed');
+            }
 
         } catch (error) {
             console.error("Error during video generation:", error);
@@ -77,9 +93,9 @@ const App: React.FC = () => {
         }
     }, []);
 
-    const handleLessonPlanGenerated = useCallback((lessonPlan: LessonPlan) => {
+    const handleLessonPlanGenerated = useCallback((lessonPlan: LessonPlan, preferences: OutputPreferences) => {
         const lessonPlanText = `Objective: ${lessonPlan.objective}\n\nMaterials: ${lessonPlan.materials.join(', ')}\n\nProcedure:\n${lessonPlan.procedure.join('\n')}\n\nChecks for Understanding: ${lessonPlan.checks.join(', ')}\n\nClosure: ${lessonPlan.closure}`;
-        runVideoGenerationProcess(lessonPlanText);
+        runVideoGenerationProcess(lessonPlanText, preferences);
     }, [runVideoGenerationProcess]);
 
 
@@ -88,7 +104,7 @@ const App: React.FC = () => {
             return <ProgressView progressSteps={progress} />;
         }
         if (videoUrl) {
-            return <VideoPreview videoUrl={videoUrl} images={images} substituteNote={substituteNote} onReset={handleReset} />;
+            return <VideoPreview videoUrl={videoUrl} images={images} substituteNote={substituteNote} onReset={handleReset} powerPointBlob={powerPointBlob} />;
         }
         switch (workflow) {
             case 'upload':

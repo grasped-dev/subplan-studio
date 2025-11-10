@@ -4,12 +4,12 @@ import { Button } from './Button';
 import { Dropdown } from './Dropdown';
 import { TextArea } from './TextArea';
 import { GRADE_LEVELS } from '../constants';
-import type { LessonPlan, Standard } from '../types';
+import type { LessonPlan, Standard, OutputPreferences } from '../types';
 import { generateLessonPlan } from '../services/geminiService';
 import { getCategoriesForGrade, getStandards } from '../services/standardsService';
 
 interface LessonGeneratorProps {
-    onGenerated: (lessonPlan: LessonPlan) => void;
+    onGenerated: (lessonPlan: LessonPlan, preferences: OutputPreferences) => void;
     onBack: () => void;
 }
 
@@ -26,7 +26,14 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
     const [isLoadingStandards, setIsLoadingStandards] = useState(false);
     
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedPlan, setGeneratedPlan] = useState<LessonPlan | null>(null);
+    const [generationData, setGenerationData] = useState<{ plan: LessonPlan; preferences: OutputPreferences } | null>(null);
+
+    const [outputPreferences, setOutputPreferences] = useState<OutputPreferences>({
+        substituteNote: true,
+        slides: true,
+        video: false,  // Disabled by default since it's not implemented yet
+        audio: false   // Disabled by default since it's not implemented yet
+    });
 
     // Fetch categories when grade changes
     useEffect(() => {
@@ -90,11 +97,11 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
         );
     };
     
-    const handleGeneratePlan = async () => {
+    const handleGeneratePlan = async (preferences: typeof outputPreferences) => {
         setIsGenerating(true);
         try {
             const plan = await generateLessonPlan(grade, selectedStandards, priorLearning, focus);
-            setGeneratedPlan(plan);
+            setGenerationData({ plan, preferences });
         } catch (error) {
             console.error("Failed to generate lesson plan:", error);
             // Show error to user in a real app
@@ -103,25 +110,25 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
         }
     };
     
-    if (generatedPlan) {
+    if (generationData) {
         return (
             <div className="w-full max-w-3xl mx-auto p-8 border-2 border-border rounded-lg bg-white/80 backdrop-blur-sm">
                 <h2 className="font-serif text-3xl font-bold mb-2 text-center">Generated Lesson Plan</h2>
-                <p className="text-center text-gray-600 mb-6">Review the plan below. You can now proceed to generate the video.</p>
+                <p className="text-center text-gray-600 mb-6">Review the plan below. You can now proceed to generate the lesson materials.</p>
                 <div className="space-y-4 p-4 bg-preview-bg rounded-md border border-border text-sm leading-relaxed">
-                    <p><strong>Objective:</strong> {generatedPlan.objective}</p>
-                    <p><strong>Materials:</strong> {generatedPlan.materials.join(', ')}</p>
+                    <p><strong>Objective:</strong> {generationData.plan.objective}</p>
+                    <p><strong>Materials:</strong> {generationData.plan.materials.join(', ')}</p>
                     <div><strong>Procedure:</strong>
                         <ul className="list-decimal list-inside ml-4 space-y-1 mt-1">
-                            {generatedPlan.procedure.map((step, i) => <li key={i}>{step}</li>)}
+                            {generationData.plan.procedure.map((step, i) => <li key={i}>{step}</li>)}
                         </ul>
                     </div>
-                    <p><strong>Checks for Understanding:</strong> {generatedPlan.checks.join(', ')}</p>
-                    <p><strong>Closure:</strong> {generatedPlan.closure}</p>
+                    <p><strong>Checks for Understanding:</strong> {generationData.plan.checks.join(', ')}</p>
+                    <p><strong>Closure:</strong> {generationData.plan.closure}</p>
                 </div>
                 <div className="flex items-center justify-between gap-4 mt-6">
-                    <Button variant="secondary" onClick={() => setGeneratedPlan(null)}>Edit Prompts</Button>
-                    <Button onClick={() => onGenerated(generatedPlan)}>Generate Video from this Plan</Button>
+                    <Button variant="secondary" onClick={() => setGenerationData(null)}>Edit Prompts</Button>
+                    <Button onClick={() => onGenerated(generationData.plan, generationData.preferences)}>Generate Sub Plan Materials</Button>
                 </div>
             </div>
         )
@@ -170,9 +177,54 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
                 </div>
                 <TextArea id="priorLearning" label="What was covered previously?" value={priorLearning} onChange={e => setPriorLearning(e.target.value)} rows={3} placeholder="e.g., Students have learned to identify numerators and denominators." />
                 <TextArea id="focus" label="What should this lesson focus on?" value={focus} onChange={e => setFocus(e.target.value)} rows={3} placeholder="e.g., Finding common denominators and creating equivalent fractions."/>
+                
+                <div className="p-4 bg-preview-bg rounded-md border border-border">
+                    <label className="block text-sm font-medium mb-2 font-sans tracking-wide">
+                        What would you like to generate?
+                    </label>
+                    <div className="space-y-2">
+                        <label className="flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={outputPreferences.substituteNote}
+                                onChange={(e) => setOutputPreferences({...outputPreferences, substituteNote: e.target.checked})}
+                                className="mr-2 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                            />
+                            <span>Substitute Teacher Note</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={outputPreferences.slides}
+                                onChange={(e) => setOutputPreferences({...outputPreferences, slides: e.target.checked})}
+                                className="mr-2 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                            />
+                            <span>Presentation Slides</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer opacity-50">
+                            <input 
+                                type="checkbox" 
+                                checked={outputPreferences.video}
+                                disabled
+                                className="mr-2 h-4 w-4 rounded border-border"
+                            />
+                            <span>Video Lesson (Coming Soon)</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer opacity-50">
+                            <input 
+                                type="checkbox" 
+                                checked={outputPreferences.audio}
+                                disabled
+                                className="mr-2 h-4 w-4 rounded border-border"
+                            />
+                            <span>Audio Narration (Coming Soon)</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between gap-4 pt-4 border-t-2 border-dashed border-border">
                     <Button type="button" variant="secondary" onClick={onBack}>Back</Button>
-                    <Button onClick={handleGeneratePlan} disabled={isGenerating || selectedStandards.length === 0 || !focus.trim()}>
+                    <Button onClick={() => handleGeneratePlan(outputPreferences)} disabled={isGenerating || selectedStandards.length === 0 || !focus.trim()}>
                         {isGenerating ? 'Generating...' : 'Generate Lesson Plan'}
                     </Button>
                 </div>

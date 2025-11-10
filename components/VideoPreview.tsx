@@ -1,14 +1,23 @@
 import React from 'react';
 import { Button } from './Button';
+import { downloadPowerPoint } from '../services/slidesService';
 
 interface VideoPreviewProps {
     videoUrl: string | null;
     images: string[];
     substituteNote: string | null;
     onReset: () => void;
+    powerPointBlob: Blob | null;
 }
 
-export const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, images, substituteNote, onReset }) => {
+export const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, images, substituteNote, onReset, powerPointBlob }) => {
+    
+    const handleDownloadPowerPoint = () => {
+        if (powerPointBlob) {
+            downloadPowerPoint(powerPointBlob, 'SubPlan-Studio-Lesson.pptx');
+        }
+    };
+    
     return (
         <div className="w-full">
             <h2 className="font-serif text-4xl font-bold mb-8 text-center">Your Lesson is Ready!</h2>
@@ -27,10 +36,18 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, images, su
                         ))}
                     </div>
                 </div>
-                <div className="lg:col-span-1 p-6 bg-white/80 backdrop-blur-sm border-2 border-border rounded-lg">
-                     <h3 className="font-serif text-2xl font-bold mb-4">Substitute Note</h3>
-                     <div className="whitespace-pre-wrap p-4 bg-brand-white border border-border rounded-md font-sans text-sm leading-relaxed max-h-96 overflow-y-auto">
-                        {substituteNote || 'No note generated.'}
+                <div className="lg:col-span-1 p-6 bg-white/80 backdrop-blur-sm border-2 border-border rounded-lg flex flex-col gap-8">
+                     <div>
+                         <h3 className="font-serif text-2xl font-bold mb-4">Substitute Note</h3>
+                         <div className="whitespace-pre-wrap p-4 bg-brand-white border border-border rounded-md font-sans text-sm leading-relaxed max-h-96 overflow-y-auto">
+                            {substituteNote || 'No note generated.'}
+                         </div>
+                     </div>
+                     <div>
+                        <h3 className="font-serif text-2xl font-bold mb-4">Downloads</h3>
+                        <Button onClick={handleDownloadPowerPoint} disabled={!powerPointBlob}>
+                            {powerPointBlob ? 'Download PowerPoint' : 'Generating Presentation...'}
+                        </Button>
                      </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
+const ELEVENLABS_API_KEY = '';
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
 // Popular voice IDs from ElevenLabs (you can change these)

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { PROMPT_TEMPLATES } from '../constants';
 import type { LessonPlan } from '../types';
 
@@ -27,22 +27,22 @@ export const generateLessonPlan = async (
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
-                    type: Type.OBJECT,
+                    type: 'OBJECT',
                     properties: {
-                        objective: { type: Type.STRING },
+                        objective: { type: 'STRING' },
                         materials: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
+                            type: 'ARRAY',
+                            items: { type: 'STRING' }
                         },
                         procedure: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
+                            type: 'ARRAY',
+                            items: { type: 'STRING' }
                         },
                         checks: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
+                            type: 'ARRAY',
+                            items: { type: 'STRING' }
                         },
-                        closure: { type: Type.STRING },
+                        closure: { type: 'STRING' },
                     },
                     required: ['objective', 'materials', 'procedure', 'checks', 'closure']
                 }
@@ -85,8 +85,8 @@ export const generateImagePrompts = async (script: string): Promise<string[]> =>
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
+                    type: 'ARRAY',
+                    items: { type: 'STRING' }
                 }
             }
         });

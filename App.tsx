@@ -8,6 +8,7 @@ import { VideoPreview } from './components/VideoPreview';
 import { generateLessonPlan, generateScript, generateImagePrompts, generateSubstituteNote } from './services/geminiService';
 import { generateImages, assembleVideo } from './services/videoService';
 import { generatePowerPoint } from './services/slidesService';
+import { generateAudio, prepareScriptForAudio, createAudioURL } from './services/audioService';
 import type { Workflow, LessonPlan, ProgressStep, OutputPreferences } from './types';
 import { PROGRESS_STEPS } from './constants';
 
@@ -19,6 +20,9 @@ const App: React.FC = () => {
     const [substituteNote, setSubstituteNote] = useState<string | null>(null);
     const [images, setImages] = useState<string[]>([]);
     const [powerPointBlob, setPowerPointBlob] = useState<Blob | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+    const [preferences, setPreferences] = useState<OutputPreferences | null>(null);
 
     const handleReset = useCallback(() => {
         setWorkflow(null);
@@ -28,11 +32,15 @@ const App: React.FC = () => {
         setSubstituteNote(null);
         setImages([]);
         setPowerPointBlob(null);
+        setAudioUrl(null);
+        setAudioBlob(null);
+        setPreferences(null);
     }, []);
 
-    const runVideoGenerationProcess = useCallback(async (lessonPlanText: string, preferences: OutputPreferences = { substituteNote: true, slides: true, video: false, audio: false }) => {
+    const runVideoGenerationProcess = useCallback(async (lessonPlanText: string, prefs: OutputPreferences = { substituteNote: true, slides: true, video: false, audio: true }) => {
         setIsLoading(true);
         setProgress([]);
+        setPreferences(prefs);
 
         const updateProgress = (stepKey: string, status: 'in_progress' | 'completed' | 'error') => {
             setProgress(prev => {
@@ -53,13 +61,28 @@ const App: React.FC = () => {
             const script = await generateScript(lessonPlanText);
             updateProgress('script', 'completed');
 
+            if (prefs.audio) {
+                updateProgress('voiceover', 'in_progress');
+                try {
+                    const audioText = prepareScriptForAudio(script);
+                    const newAudioBlob = await generateAudio({ text: audioText });
+                    setAudioBlob(newAudioBlob);
+                    const url = createAudioURL(newAudioBlob);
+                    setAudioUrl(url);
+                    updateProgress('voiceover', 'completed');
+                } catch (error) {
+                    console.error('Failed to generate audio:', error);
+                    updateProgress('voiceover', 'error');
+                }
+            }
+
             updateProgress('visuals', 'in_progress');
             const imagePrompts = await generateImagePrompts(script);
             const generatedImages = await generateImages(imagePrompts);
             setImages(generatedImages);
             updateProgress('visuals', 'completed');
 
-            if (preferences.slides) {
+            if (prefs.slides) {
                 updateProgress('presentation', 'in_progress');
                 const lessonTitleMatch = lessonPlanText.match(/Objective:(.*)/i);
                 const lessonTitle = lessonTitleMatch ? lessonTitleMatch[1].trim() : "Generated Lesson";
@@ -68,17 +91,12 @@ const App: React.FC = () => {
                 updateProgress('presentation', 'completed');
             }
 
-            updateProgress('voiceover', 'in_progress');
-            // Mock voiceover generation
-            await new Promise(res => setTimeout(res, 1500));
-            updateProgress('voiceover', 'completed');
-
             updateProgress('assembly', 'in_progress');
             const finalVideoUrl = await assembleVideo();
             setVideoUrl(finalVideoUrl);
             updateProgress('assembly', 'completed');
             
-            if (preferences.substituteNote) {
+            if (prefs.substituteNote) {
                 updateProgress('sub_note', 'in_progress');
                 const note = await generateSubstituteNote(lessonPlanText);
                 setSubstituteNote(note);
@@ -104,7 +122,16 @@ const App: React.FC = () => {
             return <ProgressView progressSteps={progress} />;
         }
         if (videoUrl) {
-            return <VideoPreview videoUrl={videoUrl} images={images} substituteNote={substituteNote} onReset={handleReset} powerPointBlob={powerPointBlob} />;
+            return <VideoPreview 
+                videoUrl={videoUrl} 
+                images={images} 
+                substituteNote={substituteNote} 
+                onReset={handleReset} 
+                powerPointBlob={powerPointBlob}
+                hasSlides={preferences?.slides || false}
+                audioUrl={audioUrl}
+                audioBlob={audioBlob}
+            />;
         }
         switch (workflow) {
             case 'upload':

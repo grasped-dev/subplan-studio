@@ -71,13 +71,17 @@ export const generateAudio = async ({
  * Prepares script text for audio generation by removing visual cues and formatting
  */
 export const prepareScriptForAudio = (script: string): string => {
+    const headerRegex = /\*\*(.*?)\s*\(.*?\)\*\*/gi;
+    const visualCueRegex = /\[VISUAL CUE:.*?\]/gi;
+    const whitespaceRegex = /\s+/g;
+    
     return script
         // Remove visual cue markers
-        .replace(/\[VISUAL CUE:[^\]]+\]/gi, '')
+        .replace(visualCueRegex, '')
         // Remove section headers like **INTRODUCTION (30-45 seconds)**
-        .replace(/\*\*(.*?)\s*\(.*?\)\*\*/gi, '')
+        .replace(headerRegex, '')
         // Remove extra whitespace
-        .replace(/\s+/g, ' ')
+        .replace(whitespaceRegex, ' ')
         .trim();
 };
 

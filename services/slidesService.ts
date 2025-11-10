@@ -12,40 +12,46 @@ interface SlideContent {
 const parseScriptToSlides = (script: string): SlideContent[] => {
     const slides: SlideContent[] = [];
     
-    // Title slide
     slides.push({
         title: "Today's Lesson",
         content: [],
     });
-    
-    // Extract sections and visual cues. The regex is case-insensitive and captures the title.
-    const sections = script.split(/\*\*(.*?)\s*\(.*?\)\*\*/i);
-    
-    for (let i = 1; i < sections.length; i += 2) {
-        const sectionTitle = sections[i].trim();
-        const sectionContent = sections[i + 1]?.trim() || '';
-        
-        // Find visual cues in this section
-        const visualCueMatch = sectionContent.match(/\[VISUAL CUE:([^\]]+)\]/);
-        
-        // Extract bullet points (sentences that would work as bullets)
-        const sentences = sectionContent
-            .replace(/\[VISUAL CUE:[^\]]+\]/g, '')
-            .split(/[.!?]+/)
-            .map(s => s.trim())
-            .filter(s => s.length > 10 && s.length < 150)
-            .slice(0, 4); // Max 4 bullets per slide
-        
-        if (sentences.length > 0 && sectionTitle) {
-            slides.push({
-                title: sectionTitle,
-                content: sentences,
-                visualCue: visualCueMatch ? visualCueMatch[1].trim() : undefined,
-            });
-        }
+
+    const sectionHeaderRegex = /\*\*(.*?)\s*\(.*?\)\*\*/gi;
+    const visualCueRegex = /\[VISUAL CUE:(.*?)\]/;
+    const visualCueGlobalRegex = /\[VISUAL CUE:.*?\]/g;
+    const sentenceSplitRegex = /[.!?]+/;
+
+    const matches = [...script.matchAll(sectionHeaderRegex)];
+
+    if (matches.length > 0) {
+        matches.forEach((match, index) => {
+            const sectionTitle = match[1].trim();
+            
+            const contentStartIndex = (match.index ?? 0) + match[0].length;
+            const nextMatch = matches[index + 1];
+            const contentEndIndex = nextMatch ? nextMatch.index : script.length;
+            
+            const sectionContent = script.substring(contentStartIndex, contentEndIndex).trim();
+            const visualCueMatch = sectionContent.match(visualCueRegex);
+            
+            const sentences = sectionContent
+                .replace(visualCueGlobalRegex, '')
+                .split(sentenceSplitRegex)
+                .map(s => s.trim())
+                .filter(s => s.length > 10 && s.length < 150)
+                .slice(0, 4);
+            
+            if (sentences.length > 0 && sectionTitle) {
+                slides.push({
+                    title: sectionTitle,
+                    content: sentences,
+                    visualCue: visualCueMatch ? visualCueMatch[1].trim() : undefined,
+                });
+            }
+        });
     }
     
-    // Final slide
     slides.push({
         title: "Questions?",
         content: ["Let's review what we learned today!"],
@@ -53,6 +59,7 @@ const parseScriptToSlides = (script: string): SlideContent[] => {
     
     return slides;
 };
+
 
 /**
  * Generates a PowerPoint presentation from a lesson script

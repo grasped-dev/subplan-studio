@@ -69,7 +69,7 @@ export const PROGRESS_STEPS: Record<string, Omit<ProgressStep, 'status'>> = {
     script: { key: 'script', label: 'Composing Script…' },
     visuals: { key: 'visuals', label: 'Generating Visuals…' },
     presentation: { key: 'presentation', label: 'Creating PowerPoint…' },
-    voiceover: { key: 'voiceover', label: 'Narration in Progress…' },
+    voiceover: { key: 'voiceover', label: 'Generating Audio Narration…' },
     assembly: { key: 'assembly', label: 'Assembling Video…' },
     sub_note: { key: 'sub_note', label: 'Preparing Substitute Note…' },
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Dropdown } from './Dropdown';
@@ -32,7 +31,7 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
         substituteNote: true,
         slides: true,
         video: false,  // Disabled by default since it's not implemented yet
-        audio: false   // Disabled by default since it's not implemented yet
+        audio: true
     });
 
     // Fetch categories when grade changes
@@ -210,14 +209,14 @@ export const LessonGenerator: React.FC<LessonGeneratorProps> = ({ onGenerated, o
                             />
                             <span>Video Lesson (Coming Soon)</span>
                         </label>
-                        <label className="flex items-center cursor-pointer opacity-50">
+                        <label className="flex items-center cursor-pointer">
                             <input 
                                 type="checkbox" 
                                 checked={outputPreferences.audio}
-                                disabled
-                                className="mr-2 h-4 w-4 rounded border-border"
+                                onChange={(e) => setOutputPreferences({...outputPreferences, audio: e.target.checked})}
+                                className="mr-2 h-4 w-4 rounded border-border text-accent focus:ring-accent"
                             />
-                            <span>Audio Narration (Coming Soon)</span>
+                            <span>Audio Narration</span>
                         </label>
                     </div>
                 </div>
